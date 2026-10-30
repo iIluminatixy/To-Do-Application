@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Liquid Glass To-Do & Reminders</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    /* ── Animated mesh background ── */
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+      overflow-x: hidden;
+    }
+
+    .mesh-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.45;
+      animation: float 12s ease-in-out infinite;
+    }
+    .orb-1 { width: 520px; height: 520px; background: radial-gradient(circle, #7c3aed, #4f46e5); top: -120px; left: -120px; animation-delay: 0s; }
+    .orb-2 { width: 400px; height: 400px; background: radial-gradient(circle, #ec4899, #8b5cf6); top: 30%; right: -80px; animation-delay: -4s; }
+    .orb-3 { width: 360px; height: 360px; background: radial-gradient(circle, #06b6d4, #3b82f6); bottom: -80px; left: 20%; animation-delay: -8s; }
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33%       { transform: translate(30px, -40px) scale(1.05); }
+      66%       { transform: translate(-20px, 25px) scale(0.97); }
+    }
+
+    /* ── Liquid glass card ── */
+    .glass {
+      background: rgba(255, 255, 255, 0.10);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.20);
+      box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.10);
+    }
+    .glass-strong {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(32px) saturate(200%);
+      -webkit-backdrop-filter: blur(32px) saturate(200%);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      box-shadow:
+        0 16px 48px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.30),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+    }
+    .glass-input {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #fff;
+      transition: all 0.2s ease;
+    }
+    .glass-input::placeholder { color: rgba(255,255,255,0.45); }
+    .glass-input:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(167, 139, 250, 0.7);
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
+    }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(79, 70, 229, 0.9));
+      border: 1px solid rgba(167, 139, 250, 0.5);
+      box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+      color: #fff;
+      transition: all 0.2s ease;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, rgba(167, 139, 250, 0.95), rgba(109, 100, 249, 0.95));
+      box-shadow: 0 6px 20px rgba(139, 92, 246, 0.55), inset 0 1px 0 rgba(255,255,255,0.25);
+      transform: translateY(-1px);
+    }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-ghost {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.75);
+      transition: all 0.2s ease;
+    }
+    .btn-ghost:hover {
+      background: rgba(255,255,255,0.13);
+      color: #fff;
+    }
+    .btn-ghost.active {
+      background: rgba(139, 92, 246, 0.3);
+      border-color: rgba(167, 139, 250, 0.5);
+      color: #c4b5fd;
+    }
+
+    /* ── Task items ── */
+    .task-item {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 16px;
+      transition: all 0.25s ease;
+      animation: slideIn 0.3s ease;
+    }
+    .task-item:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.22);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    }
+    .task-item.done {
+      opacity: 0.55;
+    }
+    .task-item.done .task-title {
+      text-decoration: line-through;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Custom checkbox ── */
+    .check-ring {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.35);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+    .check-ring:hover { border-color: #a78bfa; box-shadow: 0 0 0 4px rgba(167,139,250,0.2); }
+    .check-ring.checked {
+      background: linear-gradient(135deg, #8b5cf6, #4f46e5);
+      border-color: #a78bfa;
+      box-shadow: 0 0 12px rgba(139, 92, 246, 0.5);
+    }
+
+    /* ── Priority badge ── */
+    .badge { border-radius: 999px; font-size: 11px; font-weight: 600; padding: 2px 9px; letter-spacing: .03em; }
+    .badge-high   { background: rgba(239,68,68,0.25);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.35); }
+    .badge-medium { background: rgba(234,179,8,0.22);  color: #fde047; border: 1px solid rgba(234,179,8,0.35); }
+    .badge-low    { background: rgba(34,197,94,0.20);  color: #86efac; border: 1px solid rgba(34,197,94,0.35); }
+
+    /* ── Category dot ── */
+    .cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── Reminder badge ── */
+    .reminder-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: rgba(6,182,212,0.18);
+      border: 1px solid rgba(6,182,212,0.35);
+      border-radius: 999px;
+      font-size: 11px; color: #67e8f9;
+      padding: 2px 9px;
+    }
+
+    /* ── Scroll ── */
+    .task-scroll { max-height: 420px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.2) transparent; }
+    .task-scroll::-webkit-scrollbar { width: 4px; }
+    .task-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px;
+      animation: fadeIn 0.2s ease;
+    }
+    .modal-box {
+      background: rgba(30, 20, 60, 0.85);
+      backdrop-filter: blur(40px) saturate(200%);
+      -webkit-backdrop-filter: blur(40px) saturate(200%);
+      border: 1px solid rgba(255,255,255,0.22);
+      box-shadow: 0 24px 64px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.2);
+      border-radius: 24px;
+      width: 100%; max-width: 460px;
+      animation: scaleIn 0.25s ease;
+    }
+    @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes scaleIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: rgba(30,20,60,0.92);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 999px;
+      color: #fff; padding: 10px 22px;
+      font-size: 14px; font-weight: 500;
+      z-index: 999;
+      display: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    /* ── Stats card ── */
+    .stat-card {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 14px;
+      padding: 14px 16px;
+      text-align: center;
+    }
+
+    /* ── Progress bar ── */
+    .progress-track { background: rgba(255,255,255,0.1); border-radius: 999px; height: 6px; overflow: hidden; }
+    .progress-fill  { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #8b5cf6, #06b6d4); transition: width 0.5s ease; }
+
+    /* ── Select / date styling ── */
+    select option { background: #1e1040; color: #fff; }
+
+    /* ── Notification dot ── */
+    .notif-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #ec4899;
+      box-shadow: 0 0 8px rgba(236,72,153,0.7);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(1.2)} }
+  </style>
+</head>
+<body>
+
+<!-- Animated mesh background -->
+<div class="mesh-bg">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<!-- ── App Shell ── -->
+<div style="position:relative;z-index:1;" class="min-h-screen p-4 md:p-6 flex flex-col items-center">
+
+  <!-- Header -->
+  <div class="w-full max-w-2xl mb-6">
+    <div class="glass-strong rounded-3xl p-5 flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-white tracking-tight">✦ GlassTask</h1>
+        <p id="dateDisplay" class="text-sm mt-0.5" style="color:rgba(255,255,255,0.55)"></p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="relative">
+          <button onclick="checkReminders()" class="btn-ghost rounded-full p-2.5" title="Check reminders">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          </button>
+          <div id="notifDot" class="notif-dot absolute -top-0.5 -right-0.5 hidden"></div>
+        </div>
+        <button onclick="openModal()" class="btn-primary rounded-2xl px-4 py-2.5 flex items-center gap-2 font-semibold text-sm">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Task
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Row -->
+  <div class="w-full max-w-2xl mb-5 grid grid-cols-3 gap-3">
+    <div class="stat-card">
+      <div id="statTotal" class="text-2xl font-bold text-white">0</div>
+      <div class="text-xs mt-0.5" style="color:rgba(255,255,255,0.5)">Total</div>
+    </div>
+    <div class="stat-card">
+      <div id="statDone" class="text-2xl font-bold" style="color:#a78bfa">0</div>
+      <div class="text-xs mt-0.5" style="color:rgba(255,255,255,0.5)">Completed</div>
+    </div>
+    <div class="stat-card">
+      <div id="statPending" class="text-2xl font-bold" style="color:#67e8f9">0</div>
+      <div class="text-xs mt-0.5" style="color:rgba(255,255,255,0.5)">Pending</div>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="w-full max-w-2xl mb-5">
+    <div class="glass rounded-2xl p-4">
+      <div class="flex justify-between text-sm mb-2">
+        <span class="text-white font-medium">Today's Progress</span>
+        <span id="progressPct" class="font-semibold" style="color:#a78bfa">0%</span>
+      </div>
+      <div class="progress-track"><div id="progressFill" class="progress-fill" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- Filters & Search -->
+  <div class="w-full max-w-2xl mb-4 flex flex-col sm:flex-row gap-3">
+    <div class="relative flex-1">
+      <svg class="absolute left-3 top-1/2 -translate-y-1/2 opacity-40" width="16" height="16" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="searchInput" type="text" placeholder="Search tasks…" oninput="renderTasks()"
+        class="glass-input w-full rounded-xl pl-9 pr-4 py-2.5 text-sm" />
+    </div>
+    <div class="flex gap-2">
+      <button onclick="setFilter('all')"       id="f-all"       class="btn-ghost active text-sm rounded-xl px-4 py-2.5 font-medium">All</button>
+      <button onclick="setFilter('pending')"   id="f-pending"   class="btn-ghost text-sm rounded-xl px-4 py-2.5 font-medium">Pending</button>
+      <button onclick="setFilter('done')"      id="f-done"      class="btn-ghost text-sm rounded-xl px-4 py-2.5 font-medium">Done</button>
+    </div>
+  </div>
+
+  <!-- Sort row -->
+  <div class="w-full max-w-2xl mb-4 flex items-center gap-3">
+    <span class="text-xs font-medium" style="color:rgba(255,255,255,0.45)">Sort by:</span>
+    <select id="sortSelect" onchange="renderTasks()" class="glass-input text-xs rounded-xl px-3 py-1.5 cursor-pointer">
+      <option value="created">Date Created</option>
+      <option value="due">Due Date</option>
+      <option value="priority">Priority</option>
+    </select>
+    <div class="flex gap-2 ml-auto flex-wrap">
+      <button onclick="setCategoryFilter('all')" id="cf-all" class="btn-ghost active text-xs rounded-xl px-3 py-1.5">All</button>
+      <button onclick="setCategoryFilter('Work')" id="cf-Work" class="btn-ghost text-xs rounded-xl px-3 py-1.5">🏢 Work</button>
+      <button onclick="setCategoryFilter('Personal')" id="cf-Personal" class="btn-ghost text-xs rounded-xl px-3 py-1.5">🌿 Personal</button>
+      <button onclick="setCategoryFilter('Health')" id="cf-Health" class="btn-ghost text-xs rounded-xl px-3 py-1.5">💪 Health</button>
+      <button onclick="setCategoryFilter('Study')" id="cf-Study" class="btn-ghost text-xs rounded-xl px-3 py-1.5">📚 Study</button>
+    </div>
+  </div>
+
+  <!-- Task List -->
+  <div class="w-full max-w-2xl">
+    <div id="taskList" class="task-scroll space-y-3 pr-1"></div>
+    <div id="emptyState" class="hidden text-center py-14">
+      <div style="font-size:48px">✦</div>
+      <p class="mt-3 text-base font-semibold text-white">No tasks yet</p>
+      <p class="text-sm mt-1" style="color:rgba(255,255,255,0.45)">Press <strong>New Task</strong> to get started</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Add/Edit Modal ── -->
+<div id="modal" class="modal-overlay hidden">
+  <div class="modal-box p-6">
+    <div class="flex items-center justify-between mb-5">
+      <h2 id="modalTitle" class="text-lg font-bold text-white">Add New Task</h2>
+      <button onclick="closeModal()" class="btn-ghost rounded-full p-2" style="line-height:0">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div class="space-y-4">
+      <div>
+        <label class="block text-xs font-semibold mb-1.5" style="color:rgba(255,255,255,0.6)">TASK TITLE *</label>
+        <input id="taskTitle" type="text" placeholder="What needs to be done?" class="glass-input w-full rounded-xl px-4 py-3 text-sm" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold mb-1.5" style="color:rgba(255,255,255,0.6)">DESCRIPTION</label>
+        <textarea id="taskDesc" rows="2" placeholder="Add details…" class="glass-input w-full rounded-xl px-4 py-3 text-sm resize-none"></textarea>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold mb-1.5" style="color:rgba(255,255,255,0.6)">DUE DATE</label>
+          <input id="taskDue" type="date" class="glass-input w-full rounded-xl px-3 py-2.5 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1.5" style="color:rgba(255,255,255,0.6)">DUE TIME</label>
+          <input id="taskTime" type="time" class="glass-input w-full rounded-xl px-3 py-2.5 text-sm" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold mb-1.5" style="color:rgba(255,255,255,0.6)">PRIORITY</label>
+          <select id="taskPriority" class="glass-input w-full rounded-xl px-3 py-2.5 text-sm cursor-pointer">
+            <option value="medium">⚡ Medium</option>
+            <option value="high">🔴 High</option>
+            <option value="low">🟢 Low</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1.5" style="color:rgba(255,255,255,0.6)">CATEGORY</label>
+          <select id="taskCategory" class="glass-input w-full rounded-xl px-3 py-2.5 text-sm cursor-pointer">
+            <option value="Work">🏢 Work</option>
+            <option value="Personal">🌿 Personal</option>
+            <option value="Health">💪 Health</option>
+            <option value="Study">📚 Study</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold mb-1.5" style="color:rgba(255,255,255,0.6)">REMINDER</label>
+        <select id="taskReminder" class="glass-input w-full rounded-xl px-3 py-2.5 text-sm cursor-pointer">
+          <option value="none">No reminder</option>
+          <option value="5">5 minutes before</option>
+          <option value="15">15 minutes before</option>
+          <option value="30">30 minutes before</option>
+          <option value="60">1 hour before</option>
+          <option value="1440">1 day before</option>
+        </select>
+      </div>
+
+    </div>
+
+    <div class="mt-6 flex gap-3">
+      <button onclick="closeModal()" class="btn-ghost flex-1 rounded-2xl py-3 font-semibold text-sm">Cancel</button>
+      <button onclick="saveTask()" class="btn-primary flex-1 rounded-2xl py-3 font-semibold text-sm">
+        <span id="saveBtnLabel">Add Task ✦</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let tasks = JSON.parse(localStorage.getItem('glasstasks') || '[]');
+let editingId = null;
+let currentFilter = 'all';
+let currentCatFilter = 'all';
+
+const CATEGORY_COLORS = {
+  Work:     '#8b5cf6',
+  Personal: '#22c55e',
+  Health:   '#ec4899',
+  Study:    '#f59e0b',
+};
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+function init() {
+  // Date display
+  const now = new Date();
+  document.getElementById('dateDisplay').textContent =
+    now.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+  // Notifications
+  if (Notification && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+
+  renderTasks();
+  updateStats();
+  checkReminders();
+  setInterval(checkReminders, 60000);
+}
+
+// ─── Save / Load ──────────────────────────────────────────────────────────────
+function persist() { localStorage.setItem('glasstasks', JSON.stringify(tasks)); }
+
+// ─── Modal ────────────────────────────────────────────────────────────────────
+function openModal(id) {
+  editingId = id || null;
+  const modal = document.getElementById('modal');
+  modal.classList.remove('hidden');
+
+  if (id) {
+    const t = tasks.find(x => x.id === id);
+    document.getElementById('modalTitle').textContent    = 'Edit Task';
+    document.getElementById('saveBtnLabel').textContent  = 'Save Changes ✦';
+    document.getElementById('taskTitle').value           = t.title;
+    document.getElementById('taskDesc').value            = t.desc || '';
+    document.getElementById('taskDue').value             = t.due  || '';
+    document.getElementById('taskTime').value            = t.time || '';
+    document.getElementById('taskPriority').value        = t.priority;
+    document.getElementById('taskCategory').value        = t.category;
+    document.getElementById('taskReminder').value        = t.reminder || 'none';
+  } else {
+    document.getElementById('modalTitle').textContent    = 'Add New Task';
+    document.getElementById('saveBtnLabel').textContent  = 'Add Task ✦';
+    ['taskTitle','taskDesc','taskDue','taskTime'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('taskPriority').value  = 'medium';
+    document.getElementById('taskCategory').value  = 'Work';
+    document.getElementById('taskReminder').value  = 'none';
+  }
+}
+function closeModal() { document.getElementById('modal').classList.add('hidden'); editingId = null; }
+
+// Close on overlay click
+document.getElementById('modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ─── Save Task ────────────────────────────────────────────────────────────────
+function saveTask() {
+  const title = document.getElementById('taskTitle').value.trim();
+  if (!title) { showToast('⚠️ Please enter a task title'); return; }
+
+  const task = {
+    id:       editingId || Date.now().toString(),
+    title,
+    desc:     document.getElementById('taskDesc').value.trim(),
+    due:      document.getElementById('taskDue').value,
+    time:     document.getElementById('taskTime').value,
+    priority: document.getElementById('taskPriority').value,
+    category: document.getElementById('taskCategory').value,
+    reminder: document.getElementById('taskReminder').value,
+    done:     false,
+    created:  editingId ? (tasks.find(x=>x.id===editingId)||{}).created : Date.now(),
+    notified: false,
+  };
+
+  if (editingId) {
+    task.done = (tasks.find(x=>x.id===editingId)||{}).done || false;
+    task.notified = false;
+    tasks = tasks.map(x => x.id === editingId ? task : x);
+    showToast('✅ Task updated');
+  } else {
+    tasks.unshift(task);
+    showToast('✦ Task added!');
+  }
+
+  persist();
+  closeModal();
+  renderTasks();
+  updateStats();
+}
+
+// ─── Toggle Done ──────────────────────────────────────────────────────────────
+function toggleDone(id) {
+  tasks = tasks.map(t => t.id === id ? { ...t, done: !t.done } : t);
+  persist();
+  renderTasks();
+  updateStats();
+}
+
+// ─── Delete ───────────────────────────────────────────────────────────────────
+function deleteTask(id) {
+  tasks = tasks.filter(t => t.id !== id);
+  persist();
+  renderTasks();
+  updateStats();
+  showToast('🗑 Task deleted');
+}
+
+// ─── Filter ───────────────────────────────────────────────────────────────────
+function setFilter(f) {
+  currentFilter = f;
+  ['all','pending','done'].forEach(x => {
+    document.getElementById('f-'+x).classList.toggle('active', x === f);
+  });
+  renderTasks();
+}
+
+function setCategoryFilter(c) {
+  currentCatFilter = c;
+  ['all','Work','Personal','Health','Study'].forEach(x => {
+    document.getElementById('cf-'+x).classList.toggle('active', x === c);
+  });
+  renderTasks();
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function renderTasks() {
+  const q   = document.getElementById('searchInput').value.trim().toLowerCase();
+  const sort = document.getElementById('sortSelect').value;
+
+  let list = [...tasks];
+
+  // Filter
+  if (currentFilter === 'pending') list = list.filter(t => !t.done);
+  if (currentFilter === 'done')    list = list.filter(t => t.done);
+  if (currentCatFilter !== 'all')  list = list.filter(t => t.category === currentCatFilter);
+  if (q) list = list.filter(t => t.title.toLowerCase().includes(q) || (t.desc||'').toLowerCase().includes(q));
+
+  // Sort
+  const PRIORITY_ORDER = { high:0, medium:1, low:2 };
+  if (sort === 'priority') list.sort((a,b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
+  else if (sort === 'due') list.sort((a,b) => {
+    if (!a.due && !b.due) return 0;
+    if (!a.due) return 1;
+    if (!b.due) return -1;
+    return new Date(a.due) - new Date(b.due);
+  });
+  else list.sort((a,b) => b.created - a.created);
+
+  const container = document.getElementById('taskList');
+  const empty     = document.getElementById('emptyState');
+
+  if (list.length === 0) {
+    container.innerHTML = '';
+    empty.classList.remove('hidden');
+  } else {
+    empty.classList.add('hidden');
+    container.innerHTML = list.map(t => taskHTML(t)).join('');
+  }
+}
+
+function taskHTML(t) {
+  const color  = CATEGORY_COLORS[t.category] || '#8b5cf6';
+  const badgeClass = { high:'badge-high', medium:'badge-medium', low:'badge-low' }[t.priority];
+  const priorityLabel = { high:'High', medium:'Medium', low:'Low' }[t.priority];
+
+  let dueStr = '';
+  if (t.due) {
+    const d = new Date(t.due + 'T00:00:00');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const diff = Math.round((d - today)/(1000*60*60*24));
+    if (diff < 0)       dueStr = `<span style="color:#f87171;font-size:11px;">⚠ Overdue (${Math.abs(diff)}d ago)</span>`;
+    else if (diff === 0) dueStr = `<span style="color:#fde047;font-size:11px;">📅 Today${t.time ? ' ' + fmtTime(t.time) : ''}</span>`;
+    else if (diff === 1) dueStr = `<span style="color:#a78bfa;font-size:11px;">📅 Tomorrow${t.time ? ' ' + fmtTime(t.time) : ''}</span>`;
+    else                dueStr = `<span style="color:rgba(255,255,255,0.5);font-size:11px;">📅 ${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}${t.time ? ' '+fmtTime(t.time) : ''}</span>`;
+  }
+
+  const reminderChip = (t.reminder && t.reminder !== 'none')
+    ? `<span class="reminder-chip">🔔 ${reminderLabel(t.reminder)}</span>`
+    : '';
+
+  return `
+  <div class="task-item p-4 ${t.done ? 'done' : ''}" id="task-${t.id}">
+    <div class="flex items-start gap-3">
+      <div class="check-ring ${t.done?'checked':''} mt-0.5" onclick="toggleDone('${t.id}')">
+        ${t.done ? `<svg width="13" height="13" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>` : ''}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <div class="cat-dot" style="background:${color}"></div>
+          <span class="task-title text-sm font-semibold text-white truncate">${escapeHtml(t.title)}</span>
+          <span class="badge ${badgeClass}">${priorityLabel}</span>
+        </div>
+        ${t.desc ? `<p class="text-xs mt-1 leading-relaxed line-clamp-2" style="color:rgba(255,255,255,0.5)">${escapeHtml(t.desc)}</p>` : ''}
+        <div class="flex items-center gap-3 mt-2 flex-wrap">
+          ${dueStr}
+          ${reminderChip}
+          <span style="font-size:11px;color:rgba(255,255,255,0.3)">${t.category}</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 ml-1">
+        <button onclick="openModal('${t.id}')" class="btn-ghost rounded-xl p-1.5" title="Edit" style="line-height:0">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button onclick="deleteTask('${t.id}')" class="btn-ghost rounded-xl p-1.5" title="Delete" style="line-height:0;color:rgba(248,113,113,0.8)">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
+function updateStats() {
+  const total   = tasks.length;
+  const done    = tasks.filter(t => t.done).length;
+  const pending = total - done;
+  const pct     = total ? Math.round((done/total)*100) : 0;
+
+  document.getElementById('statTotal').textContent   = total;
+  document.getElementById('statDone').textContent    = done;
+  document.getElementById('statPending').textContent = pending;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressPct').textContent  = pct + '%';
+}
+
+// ─── Reminders ────────────────────────────────────────────────────────────────
+function checkReminders() {
+  const now = new Date();
+  let hasUpcoming = false;
+
+  tasks.forEach(t => {
+    if (t.done || !t.due || !t.time || t.reminder === 'none' || t.notified) return;
+    const due = new Date(t.due + 'T' + t.time);
+    const minutesBefore = parseInt(t.reminder, 10);
+    const triggerTime = new Date(due.getTime() - minutesBefore * 60000);
+    const diff = (triggerTime - now) / 60000;
+
+    if (diff >= -1 && diff <= 1) {
+      hasUpcoming = true;
+      showToast(`🔔 Reminder: "${t.title}"`);
+      t.notified = true;
+      if (Notification && Notification.permission === 'granted') {
+        new Notification('GlassTask Reminder', {
+          body: t.title + (t.desc ? '\n' + t.desc : ''),
+          icon: '✦'
+        });
+      }
+      persist();
+    } else if (diff > 0 && diff < 60) {
+      hasUpcoming = true;
+    }
+  });
+
+  document.getElementById('notifDot').classList.toggle('hidden', !hasUpcoming);
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function fmtTime(t) {
+  if (!t) return '';
+  const [h,m] = t.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  return `${((h%12)||12)}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
+function reminderLabel(r) {
+  const map = { '5':'5 min', '15':'15 min', '30':'30 min', '60':'1 hr', '1440':'1 day' };
+  return map[r] || r + ' min';
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg, duration = 2800) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.style.display = 'none', duration);
+}
+
+// ─── Keyboard shortcuts ───────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openModal(); }
+});
+
+// ─── Seed demo tasks if empty ─────────────────────────────────────────────────
+if (tasks.length === 0) {
+  const today = new Date().toISOString().split('T')[0];
+  tasks = [
+    { id:'1', title:'Design the dashboard UI', desc:'Use liquid glass aesthetic with blur effects', due: today, time:'18:00', priority:'high', category:'Work', reminder:'30', done:false, created: Date.now()-3000, notified:false },
+    { id:'2', title:'Morning run – 5km', desc:'', due: today, time:'07:00', priority:'medium', category:'Health', reminder:'15', done:true, created: Date.now()-2000, notified:true },
+    { id:'3', title:'Read "Atomic Habits"', desc:'Chapter 12 & 13', due:'', time:'', priority:'low', category:'Study', reminder:'none', done:false, created: Date.now()-1000, notified:false },
+    { id:'4', title:'Call with Alice – project sync', desc:'Discuss Q4 roadmap and milestones', due: today, time:'15:30', priority:'high', category:'Work', reminder:'15', done:false, created: Date.now(), notified:false },
+  ];
+  persist();
+}
+
+init();
+</script>
+</body>
+</html>
